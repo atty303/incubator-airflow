@@ -44,11 +44,11 @@ class BaseExecutor(LoggingMixin):
         """
         pass
 
-    def queue_command(self, task_instance, command, priority=1, queue=None):
+    def queue_command(self, task_instance, command, priority=1, queue=None, resources=None):
         key = task_instance.key
         if key not in self.queued_tasks and key not in self.running:
             self.logger.info("Adding to queue: {}".format(command))
-            self.queued_tasks[key] = (command, priority, queue, task_instance)
+            self.queued_tasks[key] = (command, priority, queue, task_instance, resources)
 
     def queue_task_instance(
             self,
@@ -74,7 +74,8 @@ class BaseExecutor(LoggingMixin):
             task_instance,
             command,
             priority=task_instance.task.priority_weight_total,
-            queue=task_instance.task.queue)
+            queue=task_instance.task.queue,
+            resources=task_instance.task.resources)
 
     def has_task(self, task_instance):
         """
@@ -109,7 +110,7 @@ class BaseExecutor(LoggingMixin):
             key=lambda x: x[1][1],
             reverse=True)
         for i in range(min((open_slots, len(self.queued_tasks)))):
-            key, (command, _, queue, ti) = sorted_queue.pop(0)
+            key, (command, _, queue, ti, resources) = sorted_queue.pop(0)
             # TODO(jlowin) without a way to know what Job ran which tasks,
             # there is a danger that another Job started running a task
             # that was also queued to this executor. This is the last chance
@@ -121,7 +122,7 @@ class BaseExecutor(LoggingMixin):
             ti.refresh_from_db()
             if ti.state != State.RUNNING:
                 self.running[key] = command
-                self.execute_async(key, command=command, queue=queue)
+                self.execute_async(key, command=command, queue=queue, resources=resources)
             else:
                 self.logger.debug(
                     'Task is already running, not sending to '
@@ -149,7 +150,7 @@ class BaseExecutor(LoggingMixin):
         self.event_buffer = {}
         return d
 
-    def execute_async(self, key, command, queue=None):  # pragma: no cover
+    def execute_async(self, key, command, queue=None, resources=None):  # pragma: no cover
         """
         This method will execute the command asynchronously.
         """

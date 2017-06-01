@@ -28,7 +28,7 @@ class TestExecutor(BaseExecutor):
 
         super(TestExecutor, self).__init__(*args, **kwargs)
 
-    def execute_async(self, key, command, queue=None):
+    def execute_async(self, key, command, queue=None, resources=None):
         self.logger.debug("{} running task instances".format(len(self.running)))
         self.logger.debug("{} in queue".format(len(self.queued_tasks)))
 
@@ -40,7 +40,7 @@ class TestExecutor(BaseExecutor):
                 ti = self._running.pop()
                 ti.set_state(State.SUCCESS, session)
             for key, val in list(self.queued_tasks.items()):
-                (command, priority, queue, ti) = val
+                (command, priority, queue, ti, resources) = val
                 ti.set_state(State.RUNNING, session)
                 self._running.append(ti)
                 self.queued_tasks.pop(key)

@@ -39,7 +39,7 @@ class SimpleDag(BaseDag):
 
     def __init__(self,
                  dag_id,
-                 task_ids,
+                 task_resources,
                  full_filepath,
                  concurrency,
                  is_paused,
@@ -47,8 +47,8 @@ class SimpleDag(BaseDag):
         """
         :param dag_id: ID of the DAG
         :type dag_id: unicode
-        :param task_ids: task IDs associated with the DAG
-        :type task_ids: list[unicode]
+        :param task_resources: task IDs and resources associated with the DAG
+        :type task_resources: dict[unicode, Resources]
         :param full_filepath: path to the file containing the DAG e.g.
         /a/b/c.py
         :type full_filepath: unicode
@@ -62,7 +62,7 @@ class SimpleDag(BaseDag):
         :type pickle_id: unicode
         """
         self._dag_id = dag_id
-        self._task_ids = task_ids
+        self._task_id_to_resources = task_resources
         self._full_filepath = full_filepath
         self._is_paused = is_paused
         self._concurrency = concurrency
@@ -82,7 +82,7 @@ class SimpleDag(BaseDag):
         :return: A list of task IDs that are in this DAG
         :rtype: list[unicode]
         """
-        return self._task_ids
+        return list(self._task_id_to_resources.keys())
 
     @property
     def full_filepath(self):
@@ -115,6 +115,15 @@ class SimpleDag(BaseDag):
         :rtype: unicode
         """
         return self._pickle_id
+
+    def get_task_resources(self, task_id):
+        """
+        :return: whether the task resource exists in this DAG
+        :rtype: Resources
+        """
+        if task_id not in self._task_id_to_resources:
+            raise AirflowException("Unknown Task ID {}".format(task_id))
+        return self._task_id_to_resources[task_id]
 
 
 class SimpleDagBag(BaseDagBag):

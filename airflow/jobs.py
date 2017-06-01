@@ -1132,11 +1132,15 @@ class SchedulerJob(BaseJob):
                 task_instance.dag_id = dag_id_
                 task_instance.execution_date = execution_date_
 
+                task_resources = simple_dag_bag.get_dag(task_instance.dag_id) \
+                    .get_task_resources(task_instance.task_id)
+
                 self.executor.queue_command(
                     task_instance,
                     command,
                     priority=priority,
-                    queue=queue)
+                    queue=queue,
+                    resources=task_resources)
 
                 open_slots -= 1
                 dag_id_to_possibly_running_task_count[dag_id] += 1
@@ -1557,12 +1561,12 @@ class SchedulerJob(BaseJob):
             if pickle_dags:
                 pickle_id = dag.pickle(session).id
 
-            task_ids = [task.task_id for task in dag.tasks]
+            task_resources = {task.task_id: task.resources for task in dag.tasks}
 
             # Only return DAGs that are not paused
             if dag_id not in paused_dag_ids:
                 simple_dags.append(SimpleDag(dag.dag_id,
-                                             task_ids,
+                                             task_resources,
                                              dag.full_filepath,
                                              dag.concurrency,
                                              dag.is_paused,

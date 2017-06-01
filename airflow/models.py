@@ -3218,6 +3218,13 @@ class DAG(BaseDag, LoggingMixin):
             return self.task_dict[task_id]
         raise AirflowException("Task {task_id} not found".format(**locals()))
 
+    def get_task_resources(self, task_id):
+        """
+        :return: whether the task resource exists in this DAG
+        :rtype: Resources
+        """
+        return self.get_task(task_id).resources
+
     @provide_session
     def pickle_info(self, session=None):
         d = {}
