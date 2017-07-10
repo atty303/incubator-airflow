@@ -176,10 +176,14 @@ class BaseJob(Base, LoggingMixin):
 
         # Update last heartbeat time
         session = settings.Session()
-        job = session.query(BaseJob).filter(BaseJob.id == self.id).first()
-        job.latest_heartbeat = datetime.now()
-        session.merge(job)
-        session.commit()
+        try:
+            job = session.query(BaseJob).filter(BaseJob.id == self.id).first()
+            job.latest_heartbeat = datetime.now()
+            session.merge(job)
+            session.commit()
+        except:
+            session.rollback()
+            raise
 
         self.heartbeat_callback(session=session)
         session.close()
@@ -190,20 +194,25 @@ class BaseJob(Base, LoggingMixin):
         # Adding an entry in the DB
         session = settings.Session()
         self.state = State.RUNNING
-        session.add(self)
-        session.commit()
-        id_ = self.id
-        make_transient(self)
-        self.id = id_
+        try:
+            session.add(self)
+            session.commit()
+            id_ = self.id
+            make_transient(self)
+            self.id = id_
 
-        # Run
-        self._execute()
+            # Run
+            self._execute()
 
-        # Marking the success in the DB
-        self.end_date = datetime.now()
-        self.state = State.SUCCESS
-        session.merge(self)
-        session.commit()
+            # Marking the success in the DB
+            self.end_date = datetime.now()
+            self.state = State.SUCCESS
+            session.merge(self)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+
         session.close()
 
         Stats.incr(self.__class__.__name__.lower() + '_end', 1, 1)
